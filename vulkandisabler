@@ -1,0 +1,88 @@
+#!/bin/bash
+
+# INFO: Definição de cores ANSI para saída formatada no terminal
+GREEN="\e[32m"
+YELLOW="\e[33m"
+CYAN="\e[36m"
+RED="\e[31m"
+RESET="\e[0m"
+
+# INFO: Exibe um menu explicativo com cores
+clear
+echo -e "${CYAN}======================================================================${RESET}"
+echo -e "${YELLOW}     Proton Desabilitador de Vulkan - Steam (Linux)${RESET}"
+echo -e "${CYAN}======================================================================${RESET}"
+echo ""
+echo -e "${RED}ATENÇÃO: DEVE SER USADO APÓS INSTALAR ALGUMA VERSÃO DO PROTON NA STEAM${RESET}"
+echo ""
+echo -e "${GREEN}Este script faz o seguinte:${RESET}"
+echo -e "  - Identifica os diretórios de bibliotecas da Steam."
+echo -e "  - Lista todas as pastas de jogos instalados."
+echo -e "  - Procura por todas as versões do Proton"
+echo -e "  - Cria ou sobrescreve o arquivo '${YELLOW}user_settings.py${RESET}'"
+echo ""
+echo -e "${GREEN}O arquivo 'user_settings.py' conterá a seguinte configuração:${RESET}"
+echo ""
+echo -e "  ${YELLOW}user_settings = {${RESET}"
+echo -e "      \"${YELLOW}PROTON_USE_WINED3D${RESET}\": \"${RED}1${RESET}\","
+echo -e "  ${YELLOW}}${RESET}"
+echo ""
+echo -e "${CYAN}Deseja continuar? (${GREEN}s${RESET}/${RED}n${RESET})${RESET}"
+read -r resposta
+
+# INFO: Se o usuário não quiser continuar, sai do script
+if [[ "$resposta" != "s" && "$resposta" != "S" ]]; then
+    echo -e "${RED}Operação cancelada.${RESET}"
+    exit 0
+fi
+
+echo -e "${CYAN}Iniciando a configuração...${RESET}"
+
+# INFO: Obtém os caminhos das bibliotecas da Steam e adiciona /steamapps/common/
+steam_common_paths=$(grep -oP '(?<="path"\t\t").*(?=")' ~/.steam/steam/steamapps/libraryfolders.vdf | sed 's|$|/steamapps/common/|')
+
+# NOTE: Variável para rastrear se alguma pasta do Proton foi encontrada
+found_proton=false
+
+# INFO: Percorre cada caminho encontrado
+while IFS= read -r path; do
+    # Verifica se o diretório existe
+    if [[ -d "$path" ]]; then
+        echo -e "${GREEN}Listando pastas em:${RESET} $path"
+        
+        # INFO: Procura por diretórios que começam com 'Proton' (case-insensitive)
+        proton_dirs=$(find "$path" -type d -iname "proton*")
+        
+        # Se encontrar pelo menos um diretório Proton, atualiza found_proton
+        if [[ -n "$proton_dirs" ]]; then
+            found_proton=true
+        fi
+        
+        # Percorre os diretórios Proton encontrados
+        while IFS= read -r proton_dir; do
+            # INFO: Caminho do arquivo user_settings.py dentro da pasta Proton encontrada
+            user_settings_file="$proton_dir/user_settings.py"
+            
+            # INFO: Cria o diretório onde o arquivo user_settings.py será colocado, se necessário
+            mkdir -p "$(dirname "$user_settings_file")"
+            
+            # INFO: Criação do arquivo user_settings.py com a configuração desejada
+            echo -e "${YELLOW}Criando${RESET} $user_settings_file"
+            cat > "$user_settings_file" <<EOF
+user_settings = {
+
+    "PROTON_USE_WINED3D": "1",
+
+}
+EOF
+        done <<< "$proton_dirs"
+    fi
+done <<< "$steam_common_paths"
+
+# FIXME: Se nenhuma pasta do Proton foi encontrada, exibir um aviso em vermelho
+if [[ "$found_proton" == false ]]; then
+    echo -e "${RED}Nenhuma instalação do Proton encontrada! Instale o Proton na Steam antes de executar este script.${RESET}"
+    exit 1
+fi
+
+echo -e "${GREEN}Configuração concluída com sucesso! 🎉${RESET}"
