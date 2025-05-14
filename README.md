@@ -25,7 +25,7 @@ Linux: Este script foi projetado para sistemas operacionais baseados em Linux.
 
 primeiro baixe com o curl
 ```bash
-curl -LO https://raw.githubusercontent.com/katsudouki/steam-vulkan-disable/master/vulkandisabler
+curl -LO https://raw.githubusercontent.com/katsudouki/steam-vulkan-disable/refs/heads/master/vulkandisabler
 ```
 adicione as permissao de executar:
 ```bash
